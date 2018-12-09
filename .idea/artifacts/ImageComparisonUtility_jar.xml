@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="ImageComparisonUtility:jar">
-    <output-path>D:/Scratch-D/</output-path>
-    <root id="archive" name="ImageComparisonUtility.jar">
-      <element id="module-output" name="ImageComparisonUtility" />
-    </root>
-  </artifact>
-</component>

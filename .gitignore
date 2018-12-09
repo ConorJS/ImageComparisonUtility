@@ -1,5 +1,6 @@
 # IDEA configration
 *.iml
+.idea/
 
 # Some pictures sitting in root directory
 *.bmp
