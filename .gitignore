@@ -1,6 +1,4 @@
-# IDEA configration
-*.iml
-.idea/
+# PROJECT SPECIFIC
 
 # Some pictures sitting in root directory
 *.bmp
@@ -9,13 +7,21 @@
 *.png
 
 
+
+## IDEA
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
 # IDEA generated class files, etc.
 target/
 
 
-
-
-## STANDARD FILES
+## STANDARD
 
 # Compiled source #
 ###################
