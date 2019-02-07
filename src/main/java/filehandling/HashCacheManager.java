@@ -77,7 +77,9 @@ public class HashCacheManager {
     }
 
     public Sampler loadCachedSampler(Integer imageFileHash) {
-        return cache.get(imageFileHash);
+        // Returns a copy of a sampler, we don't want two files
+        // sharing the same hash to point to the same Sampler object
+        return cache.get(imageFileHash).copy();
     }
 
     private JsonNode hashCacheAsJson(Collection<Sampler> samplers) {

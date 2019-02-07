@@ -151,6 +151,13 @@ public class Sampler {
         this.pixels = new byte[0];
     }
 
+    public Sampler copy() {
+        Sampler sampler = new Sampler(this.fingerprint, this.samplerConfig_cached);
+        sampler.setFile(this.file);
+        sampler.setFileMdHash(this.fileMdHash);
+        return sampler;
+    }
+
     private Color getPixelColor(byte[] rasterArray, int x, int y) {
         try {
             int r = rasterArray[((((y * width) + x) * 3) + RGB.RED.value)];
@@ -164,8 +171,10 @@ public class Sampler {
             return new Color(r, g, b);
 
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new RuntimeException("Raster is " + (pixels != null ? "of size: " + pixels.length + ". " : "empty. ") +
-                    "Raster likely cleared too early for " + file.getName());
+            throw new RuntimeException("Array out of bounds accessing pixel " + x + "," + y +
+                    " Raster is " + (pixels != null ? "of size: " + pixels.length + ". " : "empty. ") +
+                    "Raster might not be 3 bytes per pixel (transparent PNG?), " +
+                    "otherwise raster likely cleared too early. (For " + file.getName() + ")");
         }
     }
 

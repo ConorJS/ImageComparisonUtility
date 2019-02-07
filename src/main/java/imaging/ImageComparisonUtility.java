@@ -20,7 +20,7 @@ public class ImageComparisonUtility {
 
     private final SamplerConfig samplerConfig = new SamplerConfig(10, 10, 25);
 
-    private static final double DIVERGENCE_TOLERANCE_FACTOR = 1.5;
+    private static final double DIVERGENCE_TOLERANCE_FACTOR = 1.8;
     private static final int EXPECT_MAX_DUPLICATES = 4;
 
     private ProgressBarFeedbackProxy progressBarFeedbackProxy;
@@ -34,7 +34,7 @@ public class ImageComparisonUtility {
         ui.showUI();
     }
 
-    public List<SimplePair<SimplePair<String, String>, Integer>> runImageComparisonForPath(String path) {
+    public List<SimplePair<SimplePair<String, String>, Double>> runImageComparisonForPath(String path) {
         HashCacheManager hashCacheManager = new HashCacheManager(path);
         ThreadPool threadPool = new ThreadPool();
 
@@ -107,18 +107,29 @@ public class ImageComparisonUtility {
         // Each pair key is a pair containing both filenames the comparison was drawn between,
         // the value is the comparison score
         Map<String, List<SimplePair<String, Integer>>> allDifferenceScores = new HashMap<>(); // debug
-        List<SimplePair<SimplePair<String, String>, Integer>> duplicatePairs = new ArrayList<>();
+        List<SimplePair<SimplePair<String, String>, Double>> duplicatePairs = new ArrayList<>();
         for (int i = 0; i < pictureSamplers.size(); i++) {
             NumberOrderedPairList<String> differenceScores = new NumberOrderedPairList<>();
+            Sampler compareSampler = pictureSamplers.get(i);
+
             for (Sampler pictureSampler : pictureSamplers) {
 
-                if (pictureSamplers.get(i) != pictureSampler) {
-                    differenceScores.add(pictureSampler.getFile().getName(),
-                            getDifferenceScore(
-                                    pictureSamplers.get(i).getFingerprint(this.samplerConfig),
-                                    pictureSampler.getFingerprint(this.samplerConfig)
-                            )
-                    );
+                if (compareSampler != pictureSampler) {
+
+                    if (pictureSampler.getFileMdHash() == compareSampler.getFileMdHash()) {
+
+                        // Handle hash matches differently: a 0 difference score means hash-identical
+                        // (this is impossible to achieve otherwise, even when comparing identical files)
+                        differenceScores.add(pictureSampler.getFile().getName(), 0);
+
+                    } else {
+                        differenceScores.add(pictureSampler.getFile().getName(),
+                                getDifferenceScore(
+                                        compareSampler.getFingerprint(this.samplerConfig),
+                                        pictureSampler.getFingerprint(this.samplerConfig)
+                                )
+                        );
+                    }
                 }
             }
 
@@ -126,18 +137,17 @@ public class ImageComparisonUtility {
             double nthValue = differenceScores.getNthSmallest(EXPECT_MAX_DUPLICATES).getValue();
 
             for (SimplePair<String, Integer> differenceScore : differenceScores.toList()) {
-                double diff = differenceScore.getValue();
 
+                double diff = differenceScore.getValue();
                 double divergenceRatio = (nthValue / diff);
 
                 if (divergenceRatio > DIVERGENCE_TOLERANCE_FACTOR) {
-                    int a = 0; // debug catcher
 
                     duplicatePairs.add(
                             new SimplePair(
                                 new SimplePair(
                                         differenceScore.getKey(),
-                                        pictureSamplers.get(i).getFile().getName()),
+                                        compareSampler.getFile().getName()),
                                 diff)
                             );
                 }
@@ -185,7 +195,6 @@ public class ImageComparisonUtility {
         }
 
         return duplicatePairs;
-
     }
 
     private static int hashFile(InputStream is) {
