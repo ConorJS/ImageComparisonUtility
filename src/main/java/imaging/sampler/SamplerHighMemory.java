@@ -11,8 +11,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@Deprecated
-public class SamplerHighMem {
+@Deprecated // has a very high memory footprint, use {@link imaging.sampler.Sampler} instead
+public class SamplerHighMemory {
 
     private File file;
     public File getFile() {
@@ -31,7 +31,7 @@ public class SamplerHighMem {
     private int accuracyY_cached;
     private int passesPerBlock_cached;
 
-    public SamplerHighMem(File file) {
+    public SamplerHighMemory(File file) {
         this.file = file;
 
         try {

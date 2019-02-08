@@ -1,6 +1,7 @@
 package imaging.sampler;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import imaging.util.PixelUtility;
 import imaging.util.SimpleColor;
 import imaging.util.SimplePair;
 import lombok.Getter;
@@ -122,13 +123,13 @@ public class Sampler {
                 for (int k = 0; k < passesPerBlock; k++) {
 
                     // get a pixel from the block being examined
-                    pixels.add(getPixelColor(rasterMatrix,
+                    pixels.add(PixelUtility.getPixelColor(rasterMatrix,
                             (int) ((j + ((Math.random() - 0.5) * stepSizeX))),
-                            (int) ((i + ((Math.random() - 0.5) * stepSizeY)))));
+                            (int) ((i + ((Math.random() - 0.5) * stepSizeY))), this.width));
                 }
 
                 // get the 'average' color value for the subject block
-                Color averagePixel = getAverageOfPixels(pixels);
+                Color averagePixel = PixelUtility.getAverageOfPixels(pixels);
                 blockAverages.add(new SimplePair(new Point((int)j, (int)i), new SimpleColor(averagePixel)));
 
                 // TODO: more comprehensive 'averaging' i.e. average of all 'mostly-<color>' pixels
@@ -148,7 +149,6 @@ public class Sampler {
     }
 
     public void clearRaster() {
-//        log.debug("Clearing raster for: {}", this.file.getName());
         this.pixels = new byte[0];
     }
 
@@ -157,53 +157,5 @@ public class Sampler {
         sampler.setFile(this.file);
         sampler.setFileMdHash(this.fileMdHash);
         return sampler;
-    }
-
-    private Color getPixelColor(byte[] rasterArray, int x, int y) {
-        try {
-            int r = rasterArray[((((y * width) + x) * 3) + RGB.RED.value)];
-            int g = rasterArray[((((y * width) + x) * 3) + RGB.GREEN.value)];
-            int b = rasterArray[((((y * width) + x) * 3) + RGB.BLUE.value)];
-
-            r = (r < 0) ? r + 256 : r;
-            g = (g < 0) ? g + 256 : g;
-            b = (b < 0) ? b + 256 : b;
-
-            return new Color(r, g, b);
-
-        } catch (ArrayIndexOutOfBoundsException e) {
-            throw new RuntimeException("Array out of bounds accessing pixel " + x + "," + y +
-                    " Raster is " + (pixels != null ? "of size: " + pixels.length + ". " : "empty. ") +
-                    "Raster might not be 3 bytes per pixel (transparent PNG?), " +
-                    "otherwise raster likely cleared too early. (For " + file.getName() + ")");
-        }
-    }
-
-    private Color getAverageOfPixels(ArrayList<Color> pixels) {
-        double r = 0;
-        double g = 0;
-        double b = 0;
-
-        for (Color pixel : pixels) {
-            r += pixel.getRed();
-            g += pixel.getGreen();
-            b += pixel.getBlue();
-        }
-
-        r /= pixels.size();
-        g /= pixels.size();
-        b /= pixels.size();
-
-        return new Color((int)r, (int)g, (int)b);
-    }
-
-    private enum RGB {
-        BLUE(0),
-        GREEN(1),
-        RED(2);
-
-        private final int value;
-
-        private RGB(int value) { this.value = value; }
     }
 }
