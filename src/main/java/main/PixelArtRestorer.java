@@ -1,7 +1,5 @@
 package main;
 
-import filehandling.FileHandlerUtil;
-import imaging.Sampler;
 import javafx.util.Pair;
 
 import javax.imageio.ImageIO;

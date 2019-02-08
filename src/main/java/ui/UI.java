@@ -1,8 +1,8 @@
 package ui;
 
-import imaging.FindDuplicatesWorker;
+import imaging.threading.FindDuplicatesWorker;
 import imaging.ImageComparisonUtility;
-import imaging.SimplePair;
+import imaging.util.SimplePair;
 
 import javax.swing.*;
 import java.awt.*;
