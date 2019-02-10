@@ -34,7 +34,7 @@ public class ImageNoiseScorer {
                 validRasterArray = true;
                 detectedLayerCount = validLayerCount;
 
-                for (int i = 0; i < rasterMatrix.length - 3; i += 3) {
+                for (int i = 0; i < rasterMatrix.length - validLayerCount; i += validLayerCount) {
 
                     grossScore += getTwoColorDifferenceScore(
                             // left pixel
