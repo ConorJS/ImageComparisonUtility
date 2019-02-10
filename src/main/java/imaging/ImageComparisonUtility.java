@@ -2,12 +2,13 @@ package imaging;
 
 import filehandling.FileHandlerUtil;
 import filehandling.HashCacheManager;
+import imaging.sampler.FingerprintConfig;
 import imaging.sampler.Sampler;
-import imaging.sampler.SamplerConfig;
 import imaging.scoring.NumberOrderedPairList;
 import imaging.threading.ImageLoaderWorker;
 import imaging.util.SimpleColor;
 import imaging.util.SimplePair;
+import main.ApplicationConfig;
 import threading.EventTimer;
 import threading.SynArrayList;
 import threading.ThreadPool;
@@ -24,11 +25,7 @@ import java.util.List;
 
 public class ImageComparisonUtility {
 
-    private final SamplerConfig samplerConfig = new SamplerConfig(10, 10, 25);
-
-    private static final double DIVERGENCE_TOLERANCE_FACTOR = 1.8;
-    private static final int EXPECT_MAX_DUPLICATES = 4;
-
+    private final FingerprintConfig fingerprintConfig = new FingerprintConfig(10, 10, 25);
     private ProgressBarFeedbackProxy progressBarFeedbackProxy;
     
     public void runApp() {
@@ -88,7 +85,7 @@ public class ImageComparisonUtility {
                     InputStream is = new FileInputStream(picture);
                     int hash = hashFile(is);
 
-                    if (hashCacheManager.isCached(hash, samplerConfig)) {
+                    if (hashCacheManager.isCached(hash, fingerprintConfig)) {
                         // Cache hit
                         Sampler loadedFromCache = hashCacheManager.loadCachedSampler(hash);
 
@@ -104,7 +101,7 @@ public class ImageComparisonUtility {
                         // Cache miss, pass in the hash as we've already calculated it
                         System.out.println("Cache miss for " + picture.getName() + ", calculating fingerprint.");
                         ImageLoaderWorker imageLoaderWorker =
-                                new ImageLoaderWorker( (SynArrayList<Sampler>) pictureSamplers, picture, samplerConfig,
+                                new ImageLoaderWorker( (SynArrayList<Sampler>) pictureSamplers, picture, fingerprintConfig,
                                         this.progressBarFeedbackProxy, hash);
 
                         threadPool.assignWorker(imageLoaderWorker);
@@ -135,7 +132,6 @@ public class ImageComparisonUtility {
 
         // Re-cache Samplers
         for (Sampler sampler : pictureSamplers) {
-            // TODO: Re-populate cache
             hashCacheManager.cache(sampler);
         }
         hashCacheManager.saveCache();
@@ -159,8 +155,8 @@ public class ImageComparisonUtility {
                 } else {
 
                     int comparisonScore = getComparisonScore(
-                            subject.getFingerprint(this.samplerConfig), subject.getNoiseScore(),
-                            comparisonTarget.getFingerprint(this.samplerConfig), comparisonTarget.getNoiseScore());
+                            subject.getFingerprint(this.fingerprintConfig), subject.getNoiseScore(),
+                            comparisonTarget.getFingerprint(this.fingerprintConfig), comparisonTarget.getNoiseScore());
 
                     comparisonScores.add(comparisonTarget.getFile().getName(), comparisonScore);
                 }
@@ -176,14 +172,14 @@ public class ImageComparisonUtility {
         List<SimplePair<SimplePair<String, String>, Double>> duplicatePairs = new ArrayList<>();
 
         // compare against to get an idea of how divergent the lowest score is WRT the nth score
-        double nthValue = comparisonScores.getNthSmallest(EXPECT_MAX_DUPLICATES).getValue();
+        double nthValue = comparisonScores.getNthSmallest(ApplicationConfig.EXPECT_MAX_DUPLICATES).getValue();
 
         for (SimplePair<String, Integer> comparisonScore : comparisonScores.toList()) {
 
             double diff = comparisonScore.getValue();
             double divergenceRatio = (nthValue / diff);
 
-            if (divergenceRatio > DIVERGENCE_TOLERANCE_FACTOR) {
+            if (divergenceRatio > ApplicationConfig.DIVERGENCE_TOLERANCE_FACTOR) {
 
                 // TODO: Probably refactor away SimplePair/SimpleTriple usage and use bespoke classes
                 duplicatePairs.add(new SimplePair<>(
@@ -264,7 +260,6 @@ public class ImageComparisonUtility {
         }
     }
 
-    // TODO: Look into reducing the complexity of the parameters to this method
     private int getDifferenceScore(List<SimplePair<Point, SimpleColor>> a, List<SimplePair<Point, SimpleColor>> b) {
         int differenceScore = 0;
 

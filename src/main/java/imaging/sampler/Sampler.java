@@ -18,7 +18,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-// TODO: Simplify constructor/accessor use
+// TODO: Simplify accessor use
 // TODO: (do we always get/set things like fingerprint, noiseScore and hash at the same time?)
 public class Sampler {
 
@@ -47,19 +47,25 @@ public class Sampler {
     @Setter
     private Double noiseScore = null;
 
-    // Debug
-    // TODO: Remove safely
-    @JsonIgnore
-    private int getFingerprintRequestCount = 0;
-
     // parameters that were called to produce the cached fingerprint - this should be persisted to JSON
     @Getter
-    private SamplerConfig samplerConfig_cached;
+    private FingerprintConfig fingerprintConfig_cached;
+
+    public Sampler(File file) {
+        this(file, null);
+    }
 
     public Sampler(File file, InputStream inputStream) {
         this.file = file;
         try {
-            BufferedImage image = ImageIO.read(inputStream);
+            BufferedImage image;
+
+            if (inputStream != null) {
+                image = ImageIO.read(inputStream);
+
+            } else {
+                image = ImageIO.read(file);
+            }
 
             this.height = image.getHeight();
             this.width = image.getWidth();
@@ -71,43 +77,27 @@ public class Sampler {
         }
     }
 
-    public Sampler(File file) {
-        // TODO: Reduce this, does same thing as File, Inputstream constructor
-        this.file = file;
-        try {
-            BufferedImage image = ImageIO.read(file);
-
-            this.height = image.getHeight();
-            this.width = image.getWidth();
-            this.pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
-
-        } catch (IOException | NullPointerException e) {
-            System.out.print("Failed to create an ImageInputStream from file: " + file.getName());
-            e.printStackTrace();
-        }
-    }
-
-    public Sampler(List<SimplePair<Point, SimpleColor>> fingerprint, SamplerConfig config, Double noiseScore) {
+    public Sampler(List<SimplePair<Point, SimpleColor>> fingerprint, FingerprintConfig config, Double noiseScore) {
         this.fingerprint = fingerprint;
         this.noiseScore = noiseScore;
-        samplerConfig_cached = config;
+        fingerprintConfig_cached = config;
     }
 
-    public List<SimplePair<Point, SimpleColor>> getFingerprint(SamplerConfig samplerConfig) {
-        if (!samplerConfig.equals(this.samplerConfig_cached)) {
-            this.calculateFingerprint(samplerConfig);
-            this.samplerConfig_cached = samplerConfig;
+    public List<SimplePair<Point, SimpleColor>> getFingerprint(FingerprintConfig fingerprintConfig) {
+        if (!fingerprintConfig.equals(this.fingerprintConfig_cached)) {
+            this.calculateFingerprint(fingerprintConfig);
+            this.fingerprintConfig_cached = fingerprintConfig;
         }
         // else: reusing cached fingerprint
 
         return this.fingerprint;
     }
 
-    private void calculateFingerprint(SamplerConfig samplerConfig) {
+    private void calculateFingerprint(FingerprintConfig fingerprintConfig) {
 
-        int accuracyX = samplerConfig.getAccuracyX();
-        int accuracyY = samplerConfig.getAccuracyY();
-        int passesPerBlock = samplerConfig.getPassesPerBlock();
+        int accuracyX = fingerprintConfig.getAccuracyX();
+        int accuracyY = fingerprintConfig.getAccuracyY();
+        int passesPerBlock = fingerprintConfig.getPassesPerBlock();
 
         accuracyX = accuracyX <= 100 ? accuracyX : 100;
         accuracyY = accuracyY <= 100 ? accuracyY : 100;
@@ -115,8 +105,8 @@ public class Sampler {
         double stepSizeX = width / accuracyX;
         double stepSizeY = height / accuracyY;
 
+        // TODO: Refactor away getPixelMatrix methods
         byte[] rasterMatrix;
-
         rasterMatrix = getPixelMatrix_MethodOne();
 
         ArrayList<SimplePair<Point, SimpleColor>> blockAverages = new ArrayList<>();
@@ -141,7 +131,7 @@ public class Sampler {
 
                 // get the 'average' color value for the subject block
                 Color averagePixel = PixelUtility.getAverageOfPixels(pixels);
-                blockAverages.add(new SimplePair(new Point((int)j, (int)i), new SimpleColor(averagePixel)));
+                blockAverages.add(new SimplePair<>(new Point((int)j, (int)i), new SimpleColor(averagePixel)));
 
                 // TODO: more comprehensive 'averaging' i.e. average of all 'mostly-<color>' pixels
                 // TODO: so we would look at the reddish pixels separately to the greenish pixels, for example
@@ -166,7 +156,7 @@ public class Sampler {
     }
 
     public Sampler copy() {
-        Sampler sampler = new Sampler(this.fingerprint, this.samplerConfig_cached, this.noiseScore);
+        Sampler sampler = new Sampler(this.fingerprint, this.fingerprintConfig_cached, this.noiseScore);
         sampler.setFile(this.file);
         sampler.setFileMdHash(this.fileMdHash);
         return sampler;

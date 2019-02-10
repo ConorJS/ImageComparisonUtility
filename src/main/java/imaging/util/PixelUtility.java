@@ -2,6 +2,7 @@ package imaging.util;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import main.ApplicationConfig;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -9,44 +10,47 @@ import java.util.ArrayList;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PixelUtility {
 
-    public static Color getPixelColor(byte[] rasterArray, int x, int y, int width, int height, String fileName)
+    // TODO: Refactor to use SimpleColor? Should also address performance concern in Sampler#calculateFingerprint
+    public static Color getPixelColor(byte[] rasterMatrix, int x, int y, int width, int height, String fileName)
             throws ArrayIndexOutOfBoundsException {
 
-        int _8bitLayerCount = 3;
+        int detectedLayerCount = 0;
+        boolean validRasterArray = false;
+        Color color = null;
+        for (Integer validLayerCount : ApplicationConfig.VALID_LAYER_COUNTS) {
 
-        // checks for raster arrays representing three 8-bit layers (typical RGB image)
-        if (rasterArray.length != (height * width * 3)) {
+            if (rasterMatrix.length == (height * width * validLayerCount)) {
 
-            // checks for raster arrays representing four 8-bit layers (typical RGBA image, e.g. PNG)
-            if (rasterArray.length == (height * width * 4)) {
+                validRasterArray = true;
+                detectedLayerCount = validLayerCount;
 
-                _8bitLayerCount = 4;
+                try {
+                    int r = rasterMatrix[((((y * width) + x) * detectedLayerCount) + (detectedLayerCount - RGBA.RED.value))];
+                    int g = rasterMatrix[((((y * width) + x) * detectedLayerCount) + (detectedLayerCount - RGBA.GREEN.value))];
+                    int b = rasterMatrix[((((y * width) + x) * detectedLayerCount) + (detectedLayerCount - RGBA.BLUE.value))];
 
-            } else {
-                throw new RuntimeException("Sampler for " + fileName + " has dimensions: "
-                        + width + "x" + height
-                        + ", yet has a raster array size of: " + rasterArray.length
-                        + ", should be size: " + (height * width * 3));
+                    r = (r < 0) ? r + 256 : r;
+                    g = (g < 0) ? g + 256 : g;
+                    b = (b < 0) ? b + 256 : b;
+
+                    color = new Color(r, g, b);
+
+                } catch (ArrayIndexOutOfBoundsException e) {
+
+                    throw new ArrayIndexOutOfBoundsException("Array out of bounds accessing pixel " + x + ", " + y +
+                            "Raster likely cleared too early.");
+                }
             }
         }
 
-        try {
-            int r = rasterArray[((((y * width) + x) * _8bitLayerCount) + (_8bitLayerCount - RGBA.RED.value))];
-            int g = rasterArray[((((y * width) + x) * _8bitLayerCount) + (_8bitLayerCount - RGBA.GREEN.value))];
-            int b = rasterArray[((((y * width) + x) * _8bitLayerCount) + (_8bitLayerCount - RGBA.BLUE.value))];
-
-            r = (r < 0) ? r + 256 : r;
-            g = (g < 0) ? g + 256 : g;
-            b = (b < 0) ? b + 256 : b;
-
-            return new Color(r, g, b);
-
-        } catch (ArrayIndexOutOfBoundsException e) {
-            throw new ArrayIndexOutOfBoundsException("Array out of bounds accessing pixel " + x + ", " + y +
-                    "Raster is of size: " + rasterArray.length + ". " +
-                    "Raster might not be 3 bytes per pixel (transparent PNG?), " +
-                    "otherwise raster likely cleared too early.");
+        if (!validRasterArray) {
+            throw new RuntimeException("Sampler for " + fileName + " has dimensions: "
+                    + width + "x" + height
+                    + ", yet has a raster array size of: " + rasterMatrix.length
+                    + ", should be size: " + (height * width * 3));
         }
+
+        return color;
     }
 
     public static SimpleColor getByteColor(byte rb, byte gb, byte bb) {

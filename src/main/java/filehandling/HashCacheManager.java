@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.NumericNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import imaging.sampler.FingerprintConfig;
 import imaging.sampler.Sampler;
-import imaging.sampler.SamplerConfig;
 import imaging.util.SimpleColor;
 import imaging.util.SimplePair;
 
@@ -74,10 +74,10 @@ public class HashCacheManager {
 
     // Cache hit if cache exists, a file with the same hash was fingerprinted + cached,
     // and that the cached fingerprint was performed with the same configuration as what is being requested
-    public boolean isCached(int imageFileHash, SamplerConfig config) {
+    public boolean isCached(int imageFileHash, FingerprintConfig config) {
         return (cache != null) &&
                 cache.containsKey(imageFileHash) &&
-                cache.get(imageFileHash).getSamplerConfig_cached().equals(config);
+                cache.get(imageFileHash).getFingerprintConfig_cached().equals(config);
     }
 
     public Sampler loadCachedSampler(Integer imageFileHash) {
@@ -108,10 +108,10 @@ public class HashCacheManager {
         // Sampler
         ObjectNode samplerNode = jsonNodeFactory.objectNode();
 
-        // Sampler - SamplerConfig
-        NumericNode accuracyXNode = jsonNodeFactory.numberNode(sampler.getSamplerConfig_cached().getAccuracyX());
-        NumericNode accuracyYNode = jsonNodeFactory.numberNode(sampler.getSamplerConfig_cached().getAccuracyY());
-        NumericNode passesPerBlockNode = jsonNodeFactory.numberNode(sampler.getSamplerConfig_cached().getPassesPerBlock());
+        // Sampler - FingerprintConfig
+        NumericNode accuracyXNode = jsonNodeFactory.numberNode(sampler.getFingerprintConfig_cached().getAccuracyX());
+        NumericNode accuracyYNode = jsonNodeFactory.numberNode(sampler.getFingerprintConfig_cached().getAccuracyY());
+        NumericNode passesPerBlockNode = jsonNodeFactory.numberNode(sampler.getFingerprintConfig_cached().getPassesPerBlock());
         NumericNode noiseScoreNode = jsonNodeFactory.numberNode(sampler.getNoiseScore().doubleValue());
         samplerNode.set("accuracyX", accuracyXNode);
         samplerNode.set("accuracyY", accuracyYNode);
@@ -119,7 +119,7 @@ public class HashCacheManager {
         samplerNode.set("noiseScore", noiseScoreNode);
 
         // Sampler - Fingerprint
-        ArrayNode fingerprintNode = mapper.valueToTree(sampler.getFingerprint(sampler.getSamplerConfig_cached()));
+        ArrayNode fingerprintNode = mapper.valueToTree(sampler.getFingerprint(sampler.getFingerprintConfig_cached()));
         samplerNode.set("fingerprint", fingerprintNode);
 
         rootNode.set("sampler", samplerNode);
@@ -167,10 +167,10 @@ public class HashCacheManager {
                 for (JsonNode discreteSample : fingerprintNode) {
                     fingerprint.add(reader.readValue(discreteSample));
                 }
-                SamplerConfig samplerConfig = new SamplerConfig(
+                FingerprintConfig fingerprintConfig = new FingerprintConfig(
                         accuracyXNode.asInt(), accuracyYNode.asInt(), passesPerBlockNode.asInt());
 
-                Sampler sampler = new Sampler(fingerprint, samplerConfig, noiseScoreNode.asDouble());
+                Sampler sampler = new Sampler(fingerprint, fingerprintConfig, noiseScoreNode.asDouble());
 
                 hashersWithSamplers.put(hashNode.asInt(), sampler);
 

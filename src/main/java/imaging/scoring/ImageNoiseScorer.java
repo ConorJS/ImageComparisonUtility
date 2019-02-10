@@ -6,20 +6,15 @@ import imaging.util.RGBA;
 import imaging.util.SimpleColor;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import main.ApplicationConfig;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ImageNoiseScorer {
 
     public static final ArrayList<String> NOISE_SCORES = new ArrayList<>(Collections.singletonList("wallpaper,score")); // debug only
-
-    // 3 layers is the most common, valid case (RGB), 4 occurs sometimes as well (RGBA)
-    // TODO: Refactor so that this is in a common location for all application usages,
-    // TODO: this needs to be available PixelUtility#getPixelColor
-    private static final ArrayList<Integer> VALID_LAYER_COUNTS = new ArrayList<>(Arrays.asList(3, 4));
 
     // TODO: Refactor this to consider PNG files better, as well as whole application.
     // TODO: The assumption is made that there are three 8-bit layers per image, but with transparent PNGs,
@@ -32,7 +27,7 @@ public class ImageNoiseScorer {
         boolean validRasterArray = false;
         int detectedLayerCount = 0;
 
-        for (Integer validLayerCount : VALID_LAYER_COUNTS) {
+        for (Integer validLayerCount : ApplicationConfig.VALID_LAYER_COUNTS) {
 
             if (rasterMatrix.length == (sampler.getHeight() * sampler.getWidth() * validLayerCount)) {
 
@@ -44,15 +39,15 @@ public class ImageNoiseScorer {
                     grossScore += getTwoColorDifferenceScore(
                             // left pixel
                             PixelUtility.getByteColor(
-                                    rasterMatrix[validLayerCount - RGBA.RED.value],
-                                    rasterMatrix[validLayerCount - RGBA.GREEN.value],
-                                    rasterMatrix[validLayerCount - RGBA.BLUE.value]),
+                                    rasterMatrix[i + validLayerCount - RGBA.RED.value],
+                                    rasterMatrix[i + validLayerCount - RGBA.GREEN.value],
+                                    rasterMatrix[i + validLayerCount - RGBA.BLUE.value]),
 
                             // right pixel
                             PixelUtility.getByteColor(
-                                    rasterMatrix[(validLayerCount * 2) - RGBA.RED.value],
-                                    rasterMatrix[(validLayerCount * 2) - RGBA.GREEN.value],
-                                    rasterMatrix[(validLayerCount * 2) - RGBA.BLUE.value]));
+                                    rasterMatrix[i + (validLayerCount * 2) - RGBA.RED.value],
+                                    rasterMatrix[i + (validLayerCount * 2) - RGBA.GREEN.value],
+                                    rasterMatrix[i + (validLayerCount * 2) - RGBA.BLUE.value]));
                 }
             }
         }
@@ -65,7 +60,7 @@ public class ImageNoiseScorer {
                     + ", should be size: " + (sampler.getHeight() * sampler.getWidth() * 3));
         }
 
-        return ((double)grossScore) / ((double)rasterMatrix.length / detectedLayerCount);
+        return ((double)grossScore) / ((double)(rasterMatrix.length) / ((double)detectedLayerCount));
     }
 
     /**

@@ -5,8 +5,6 @@ import threading.EventTimer;
 
 public class Main {
 
-    private String whatever;
-
     public static void main(String[] args) {
 
         EventTimer eventTimerProgram = new EventTimer();
