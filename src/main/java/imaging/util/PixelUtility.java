@@ -9,11 +9,31 @@ import java.util.ArrayList;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PixelUtility {
 
-    public static Color getPixelColor(byte[] rasterArray, int x, int y, int width) throws ArrayIndexOutOfBoundsException {
+    public static Color getPixelColor(byte[] rasterArray, int x, int y, int width, int height, String fileName)
+            throws ArrayIndexOutOfBoundsException {
+
+        int _8bitLayerCount = 3;
+
+        // checks for raster arrays representing three 8-bit layers (typical RGB image)
+        if (rasterArray.length != (height * width * 3)) {
+
+            // checks for raster arrays representing four 8-bit layers (typical RGBA image, e.g. PNG)
+            if (rasterArray.length == (height * width * 4)) {
+
+                _8bitLayerCount = 4;
+
+            } else {
+                throw new RuntimeException("Sampler for " + fileName + " has dimensions: "
+                        + width + "x" + height
+                        + ", yet has a raster array size of: " + rasterArray.length
+                        + ", should be size: " + (height * width * 3));
+            }
+        }
+
         try {
-            int r = rasterArray[((((y * width) + x) * 3) + RGB.RED.value)];
-            int g = rasterArray[((((y * width) + x) * 3) + RGB.GREEN.value)];
-            int b = rasterArray[((((y * width) + x) * 3) + RGB.BLUE.value)];
+            int r = rasterArray[((((y * width) + x) * _8bitLayerCount) + (_8bitLayerCount - RGBA.RED.value))];
+            int g = rasterArray[((((y * width) + x) * _8bitLayerCount) + (_8bitLayerCount - RGBA.GREEN.value))];
+            int b = rasterArray[((((y * width) + x) * _8bitLayerCount) + (_8bitLayerCount - RGBA.BLUE.value))];
 
             r = (r < 0) ? r + 256 : r;
             g = (g < 0) ? g + 256 : g;
@@ -49,16 +69,6 @@ public class PixelUtility {
         b /= pixels.size();
 
         return new Color((int)r, (int)g, (int)b);
-    }
-
-    private enum RGB {
-        BLUE(0),
-        GREEN(1),
-        RED(2);
-
-        private final int value;
-
-        private RGB(int value) { this.value = value; }
     }
 
 }

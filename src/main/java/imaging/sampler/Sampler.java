@@ -135,7 +135,8 @@ public class Sampler {
                     // get a pixel from the block being examined
                     pixels.add(PixelUtility.getPixelColor(rasterMatrix,
                             (int) ((j + ((Math.random() - 0.5) * stepSizeX))),
-                            (int) ((i + ((Math.random() - 0.5) * stepSizeY))), this.width));
+                            (int) ((i + ((Math.random() - 0.5) * stepSizeY))),
+                            this.width, this.height, this.file.getName()));
                 }
 
                 // get the 'average' color value for the subject block
@@ -147,10 +148,8 @@ public class Sampler {
             }
         }
 
-        Double score = ImageNoiseScorer.getImageNoiseScore(this);
-        ImageNoiseScorer.NOISE_SCORES.add(this.file.getName() + "," + score);
+        this.noiseScore = ImageNoiseScorer.getImageNoiseScore(this);
 
-        this.noiseScore = score;
         this.fingerprint = blockAverages;
     }
 

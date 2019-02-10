@@ -235,6 +235,7 @@ public class ImageComparisonUtility {
 
     private int getComparisonScore(List<SimplePair<Point, SimpleColor>> leftFingerprint, double leftNoiseScore,
                                    List<SimplePair<Point, SimpleColor>> rightFingerprint, double rightNoiseScore) {
+
         if (leftFingerprint.size() == rightFingerprint.size()) {
             // Do a simple comparison of pixel colors between two fingerprints
             int score = getDifferenceScore(leftFingerprint, rightFingerprint);
@@ -267,10 +268,13 @@ public class ImageComparisonUtility {
         return differenceScore;
     }
 
+    // TODO: This appears to work without adding weighting parameters, thorough testing could improve this though
     private int adjustScoreForNoise(int score, double leftNoiseScore, double rightNoiseScore) {
+
         // We need to adjust our tolerance significantly when
         // comparing two images that both have very low noise
         double relativeNoiseFactor = 1.0 / Math.sqrt(Math.max(leftNoiseScore, rightNoiseScore));
+
         return (int)(score * relativeNoiseFactor);
     }
 }
