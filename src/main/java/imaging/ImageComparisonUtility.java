@@ -4,8 +4,8 @@ import filehandling.FileHandlerUtil;
 import filehandling.HashCacheManager;
 import imaging.sampler.Sampler;
 import imaging.sampler.SamplerConfig;
+import imaging.scoring.NumberOrderedPairList;
 import imaging.threading.ImageLoaderWorker;
-import imaging.threading.NumberOrderedPairList;
 import imaging.util.SimpleColor;
 import imaging.util.SimplePair;
 import threading.EventTimer;
@@ -20,9 +20,7 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ImageComparisonUtility {
 
@@ -42,9 +40,39 @@ public class ImageComparisonUtility {
         ui.showUI();
     }
 
-    // TODO: Break down this method
     public List<SimplePair<SimplePair<String, String>, Double>> runImageComparisonForPath(String path) {
         HashCacheManager hashCacheManager = new HashCacheManager(path);
+
+        // Load the images into picture samplers
+        List<Sampler> pictureSamplers = loadImages(hashCacheManager, path);
+
+        // Each pair key is a pair containing both filenames the comparison was drawn between,
+        // the value is the comparison score
+        List<SimplePair<SimplePair<String, String>, Double>> duplicatePairs = new ArrayList<>();
+        for (int i = 0; i < pictureSamplers.size(); i++) {
+
+            Sampler subject = pictureSamplers.get(i);
+
+            NumberOrderedPairList<String> comparisonScores = getAllComparisonScoresForImage(subject, pictureSamplers);
+
+            duplicatePairs.addAll(getDuplicates(comparisonScores, subject));
+        }
+
+        trimBiDirectionalPairings(duplicatePairs);
+
+        // DEBUG
+        System.out.println("# duplicate pairs: " + duplicatePairs.size());
+        for (SimplePair<SimplePair<String, String>, Double> duplicatePair : duplicatePairs) {
+            System.out.println(duplicatePair.getKey().getKey() + "," +
+                    duplicatePair.getKey().getValue() + "," +
+                    duplicatePair.getValue());
+        }
+
+        return duplicatePairs;
+    }
+
+    private List<Sampler> loadImages(HashCacheManager hashCacheManager, String path) {
+
         ThreadPool threadPool = new ThreadPool();
 
         // Get all images, create samplers
@@ -112,62 +140,64 @@ public class ImageComparisonUtility {
         }
         hashCacheManager.saveCache();
 
-        // Each pair key is a pair containing both filenames the comparison was drawn between,
-        // the value is the comparison score
-        // TODO - refactor/remove?
-        Map<String, List<SimplePair<String, Integer>>> allComparisonScores = new HashMap<>(); // debug
-        List<SimplePair<SimplePair<String, String>, Double>> duplicatePairs = new ArrayList<>();
-        for (int i = 0; i < pictureSamplers.size(); i++) {
-            NumberOrderedPairList<String> comparisonScores = new NumberOrderedPairList<>();
-            Sampler leftSampler = pictureSamplers.get(i);
+        return pictureSamplers;
+    }
 
-            for (Sampler rightSampler : pictureSamplers) {
+    private NumberOrderedPairList<String> getAllComparisonScoresForImage(Sampler subject, List<Sampler> comparisonTargets) {
 
-                if (leftSampler != rightSampler) {
+        NumberOrderedPairList<String> comparisonScores = new NumberOrderedPairList<>();
 
-                    if (rightSampler.getFileMdHash() == leftSampler.getFileMdHash()) {
+        for (Sampler comparisonTarget : comparisonTargets) {
 
-                        // Handle hash matches differently: a 0 difference score means hash-identical
-                        // (this is impossible to achieve otherwise, even when comparing identical files)
-                        comparisonScores.add(rightSampler.getFile().getName(), 0);
+            if (subject != comparisonTarget) {
+                if (comparisonTarget.getFileMdHash() == subject.getFileMdHash()) {
 
-                    } else {
-                        int comparisonScore = getComparisonScore(
-                                leftSampler.getFingerprint(this.samplerConfig), leftSampler.getNoiseScore(),
-                                rightSampler.getFingerprint(this.samplerConfig), rightSampler.getNoiseScore());
+                    // Handle hash matches differently: a 0 difference score means hash-identical
+                    // (this is impossible to achieve otherwise, even when comparing identical files)
+                    comparisonScores.add(comparisonTarget.getFile().getName(), 0);
 
-                        comparisonScores.add(rightSampler.getFile().getName(), comparisonScore);
-                    }
+                } else {
+
+                    int comparisonScore = getComparisonScore(
+                            subject.getFingerprint(this.samplerConfig), subject.getNoiseScore(),
+                            comparisonTarget.getFingerprint(this.samplerConfig), comparisonTarget.getNoiseScore());
+
+                    comparisonScores.add(comparisonTarget.getFile().getName(), comparisonScore);
                 }
             }
-
-            // compare against to get an idea of how divergent the lowest score is WRT the nth score
-            double nthValue = comparisonScores.getNthSmallest(EXPECT_MAX_DUPLICATES).getValue();
-
-            for (SimplePair<String, Integer> comparisonScore : comparisonScores.toList()) {
-
-                double diff = comparisonScore.getValue();
-                double divergenceRatio = (nthValue / diff);
-
-                if (divergenceRatio > DIVERGENCE_TOLERANCE_FACTOR) {
-
-                    // TODO: Probably refactor away SimplePair/SimpleTriple usage and use bespoke classes
-                    duplicatePairs.add(
-                            new SimplePair(
-                                new SimplePair(
-                                        // name of subject image file (LHS)
-                                        comparisonScore.getKey(),
-                                        // name of subject image file (RHS)
-                                        leftSampler.getFile().getName()),
-                                diff)
-                            );
-                }
-            }
-
-            allComparisonScores.put(pictureSamplers.get(i).getFile().getName(), comparisonScores.toList()); // debug
         }
 
-        // trim pairings
+        return comparisonScores;
+    }
+
+    private List<SimplePair<SimplePair<String, String>, Double>> getDuplicates(
+            NumberOrderedPairList<String> comparisonScores, Sampler leftSampler) {
+
+        List<SimplePair<SimplePair<String, String>, Double>> duplicatePairs = new ArrayList<>();
+
+        // compare against to get an idea of how divergent the lowest score is WRT the nth score
+        double nthValue = comparisonScores.getNthSmallest(EXPECT_MAX_DUPLICATES).getValue();
+
+        for (SimplePair<String, Integer> comparisonScore : comparisonScores.toList()) {
+
+            double diff = comparisonScore.getValue();
+            double divergenceRatio = (nthValue / diff);
+
+            if (divergenceRatio > DIVERGENCE_TOLERANCE_FACTOR) {
+
+                // TODO: Probably refactor away SimplePair/SimpleTriple usage and use bespoke classes
+                duplicatePairs.add(new SimplePair<>(
+                        new SimplePair<>(comparisonScore.getKey(), leftSampler.getFile().getName()),
+                        diff));
+            }
+        }
+
+        return duplicatePairs;
+    }
+
+    private void trimBiDirectionalPairings(List<SimplePair<SimplePair<String, String>, Double>> duplicatePairs) {
+
+        // trim bi-directional pairings
         // (e.g. omit one pairing in case of two alternating pairs: 123->duplicates->456 and 456->duplicates->123)
         boolean fullPass = false;
         while (!fullPass) {
@@ -196,24 +226,6 @@ public class ImageComparisonUtility {
                 }
             }
         }
-
-        System.out.println("# duplicate pairs: " + duplicatePairs.size());
-        // TODO: CSV-like output, doesn't handle files with , characters in them though
-        for (int i = 0; i < duplicatePairs.size(); i++) {
-            System.out.println(duplicatePairs.get(i).getKey().getKey() + "," +
-                    duplicatePairs.get(i).getKey().getValue() + "," +
-                    duplicatePairs.get(i).getValue());
-        }
-
-        File noiseScoresFile = new File("NoiseScores.csv");
-        try {
-            FileHandlerUtil.writeLinesToFile(noiseScoresFile, ImageNoiseScorer.NOISE_SCORES);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return duplicatePairs;
     }
 
     private static int hashFile(InputStream is) {

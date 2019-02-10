@@ -1,7 +1,7 @@
 package imaging.sampler;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import imaging.ImageNoiseScorer;
+import imaging.scoring.ImageNoiseScorer;
 import imaging.util.PixelUtility;
 import imaging.util.SimpleColor;
 import imaging.util.SimplePair;

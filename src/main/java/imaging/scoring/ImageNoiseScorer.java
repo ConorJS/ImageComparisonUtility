@@ -1,4 +1,4 @@
-package imaging;
+package imaging.scoring;
 
 import imaging.sampler.Sampler;
 import imaging.util.PixelUtility;

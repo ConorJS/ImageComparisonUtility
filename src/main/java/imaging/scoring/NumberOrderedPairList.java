@@ -1,4 +1,4 @@
-package imaging.threading;
+package imaging.scoring;
 
 import imaging.util.SimplePair;
 
@@ -35,7 +35,8 @@ public class NumberOrderedPairList<E> {
     }
 
     /**
-     * @param pair
+     * @param pair The numeric pair, where the key is of the object's concrete type
+     *
      * @return
      *      return[0] = size order place of new pair (0 is largest, n is smallest)
      *      return[1] = index of smallest element (n-1)

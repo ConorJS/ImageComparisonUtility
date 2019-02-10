@@ -1,6 +1,6 @@
 package main;
 
-import imaging.ImageNoiseScorer;
+import imaging.scoring.ImageNoiseScorer;
 import imaging.sampler.Sampler;
 
 import java.io.File;
