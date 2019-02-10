@@ -3,6 +3,7 @@ package ui;
 import imaging.threading.FindDuplicatesWorker;
 import imaging.ImageComparisonUtility;
 import imaging.util.SimplePair;
+import imaging.util.SimpleTriple;
 
 import javax.swing.*;
 import java.awt.*;
@@ -106,16 +107,16 @@ public class UI {
 
     public void performDuplicateSearch(String path) {
 
-        List<SimplePair<SimplePair<String, String>, Double>> duplicates = app.runImageComparisonForPath(path);
+        List<SimpleTriple<SimplePair<String, String>, Double, Double>> duplicates = app.runImageComparisonForPath(path);
 
         this.appendUIText("<b>Total duplicates: " + duplicates.size() + "</b>", true);
         this.appendUIText("", true);
 
-        for (SimplePair<SimplePair<String, String>, Double> duplicate : duplicates) {
+        for (SimpleTriple<SimplePair<String, String>, Double, Double> duplicate : duplicates) {
 
-            String file1 = duplicate.getKey().getKey();
-            String file2 = duplicate.getKey().getValue();
-            Double diff = duplicate.getValue();
+            String file1 = duplicate.getA().getKey();
+            String file2 = duplicate.getA().getValue();
+            Double diff = duplicate.getB();
 
             if (diff.equals(0.0)) {
                 this.appendUIText(file1 + " duplicates " + file2 +

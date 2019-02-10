@@ -29,6 +29,10 @@ public class PixelUtility {
         }
     }
 
+    public static SimpleColor getByteColor(byte rb, byte gb, byte bb) {
+        return new SimpleColor(rb, gb, bb);
+    }
+
     public static Color getAverageOfPixels(ArrayList<Color> pixels) {
         double r = 0;
         double g = 0;

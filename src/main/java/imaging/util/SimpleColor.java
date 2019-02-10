@@ -25,4 +25,10 @@ public class SimpleColor {
         alpha = color.getAlpha();
     }
 
+    public SimpleColor(byte redByte, byte greenByte, byte blueByte) {
+        red = redByte;
+        green = greenByte;
+        blue = blueByte;
+    }
+
 }

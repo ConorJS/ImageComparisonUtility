@@ -1,6 +1,7 @@
 package imaging.sampler;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import imaging.ImageNoiseScorer;
 import imaging.util.PixelUtility;
 import imaging.util.SimpleColor;
 import imaging.util.SimplePair;
@@ -14,9 +15,11 @@ import java.awt.image.DataBufferByte;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
+// TODO: Simplify constructor/accessor use
+// TODO: (do we always get/set things like fingerprint, noiseScore and hash at the same time?)
 public class Sampler {
 
     @JsonIgnore
@@ -25,18 +28,27 @@ public class Sampler {
     private File file;
 
     @JsonIgnore
+    @Getter
     private byte[] pixels;
 
     @Getter
     @Setter
     private int fileMdHash;
+
+    @Getter
     private int height;
+    @Getter
     private int width;
 
     // cached fingerprint - this should be persisted to JSON
     private List<SimplePair<Point, SimpleColor>> fingerprint = null;
 
+    @Getter
+    @Setter
+    private Double noiseScore = null;
+
     // Debug
+    // TODO: Remove safely
     @JsonIgnore
     private int getFingerprintRequestCount = 0;
 
@@ -60,10 +72,8 @@ public class Sampler {
     }
 
     public Sampler(File file) {
-        // TODO: Reduce this
-
+        // TODO: Reduce this, does same thing as File, Inputstream constructor
         this.file = file;
-
         try {
             BufferedImage image = ImageIO.read(file);
 
@@ -77,14 +87,14 @@ public class Sampler {
         }
     }
 
-    public Sampler(List<SimplePair<Point, SimpleColor>> fingerprint, SamplerConfig config) {
+    public Sampler(List<SimplePair<Point, SimpleColor>> fingerprint, SamplerConfig config, Double noiseScore) {
         this.fingerprint = fingerprint;
+        this.noiseScore = noiseScore;
         samplerConfig_cached = config;
     }
 
     public List<SimplePair<Point, SimpleColor>> getFingerprint(SamplerConfig samplerConfig) {
         if (!samplerConfig.equals(this.samplerConfig_cached)) {
-
             this.calculateFingerprint(samplerConfig);
             this.samplerConfig_cached = samplerConfig;
         }
@@ -93,7 +103,7 @@ public class Sampler {
         return this.fingerprint;
     }
 
-    public void calculateFingerprint(SamplerConfig samplerConfig) {
+    private void calculateFingerprint(SamplerConfig samplerConfig) {
 
         int accuracyX = samplerConfig.getAccuracyX();
         int accuracyY = samplerConfig.getAccuracyY();
@@ -137,6 +147,10 @@ public class Sampler {
             }
         }
 
+        Double score = ImageNoiseScorer.getImageNoiseScore(this);
+        ImageNoiseScorer.noiseScores.add(this.file.getName() + "," + score);
+
+        this.noiseScore = score;
         this.fingerprint = blockAverages;
     }
 
@@ -153,7 +167,7 @@ public class Sampler {
     }
 
     public Sampler copy() {
-        Sampler sampler = new Sampler(this.fingerprint, this.samplerConfig_cached);
+        Sampler sampler = new Sampler(this.fingerprint, this.samplerConfig_cached, this.noiseScore);
         sampler.setFile(this.file);
         sampler.setFileMdHash(this.fileMdHash);
         return sampler;

@@ -1,11 +1,11 @@
 # PROJECT SPECIFIC
 
-# Some pictures sitting in root directory
+# Some pictures/data collection files sitting in root directory
 *.bmp
 *.jpg
 *.jpeg
 *.png
-
+*.csv
 
 
 ## IDEA

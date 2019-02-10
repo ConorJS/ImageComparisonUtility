@@ -108,9 +108,11 @@ public class HashCacheManager {
         NumericNode accuracyXNode = jsonNodeFactory.numberNode(sampler.getSamplerConfig_cached().getAccuracyX());
         NumericNode accuracyYNode = jsonNodeFactory.numberNode(sampler.getSamplerConfig_cached().getAccuracyY());
         NumericNode passesPerBlockNode = jsonNodeFactory.numberNode(sampler.getSamplerConfig_cached().getPassesPerBlock());
+        NumericNode noiseScoreNode = jsonNodeFactory.numberNode(sampler.getNoiseScore().doubleValue());
         samplerNode.set("accuracyX", accuracyXNode);
         samplerNode.set("accuracyY", accuracyYNode);
         samplerNode.set("passesPerBlock", passesPerBlockNode);
+        samplerNode.set("noiseScore", noiseScoreNode);
 
         // Sampler - Fingerprint
         ArrayNode fingerprintNode = mapper.valueToTree(sampler.getFingerprint(sampler.getSamplerConfig_cached()));
@@ -149,6 +151,7 @@ public class HashCacheManager {
             NumericNode accuracyXNode = (NumericNode) samplerNode.get("accuracyX");
             NumericNode accuracyYNode = (NumericNode) samplerNode.get("accuracyY");
             NumericNode passesPerBlockNode = (NumericNode) samplerNode.get("passesPerBlock");
+            NumericNode noiseScoreNode = (NumericNode) samplerNode.get("noiseScore");
 
             // Constructing parametric type Pair<Point, SimpleColor>
             JavaType type = mapper.getTypeFactory().constructParametricType(SimplePair.class, Point.class, SimpleColor.class);
@@ -162,7 +165,8 @@ public class HashCacheManager {
                 }
                 SamplerConfig samplerConfig = new SamplerConfig(
                         accuracyXNode.asInt(), accuracyYNode.asInt(), passesPerBlockNode.asInt());
-                Sampler sampler = new Sampler(fingerprint, samplerConfig);
+
+                Sampler sampler = new Sampler(fingerprint, samplerConfig, noiseScoreNode.asDouble());
 
                 hashersWithSamplers.put(hashNode.asInt(), sampler);
 

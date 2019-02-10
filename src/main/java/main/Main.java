@@ -14,12 +14,6 @@ public class Main {
         ImageComparisonUtility imageComparisonUtility = new ImageComparisonUtility();
         imageComparisonUtility.runApp();
 
-//        PixelArtRestorer pixelArtRestorer =
-//                new PixelArtRestorer("mario.jpg", "RestoredPixelArt.bmp");
-//        System.out.println("Block size is likely: " + pixelArtRestorer.determineBlockSize());
-
         System.out.println("Program ran for: " + eventTimerProgram.endTimer() + " ms");
-
     }
-
 }

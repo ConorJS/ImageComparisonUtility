@@ -1,9 +1,6 @@
 package filehandling;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -49,6 +46,16 @@ public class FileHandlerUtil {
         });
 
         return stringBuilder.toString();
+    }
+
+    public static void writeLinesToFile(File file, List<String> lines) throws IOException {
+        FileWriter fw = new FileWriter(file);
+
+        for (String line : lines) {
+            fw.write(line + "\r\n");
+        }
+
+        fw.close();
     }
 
 }
