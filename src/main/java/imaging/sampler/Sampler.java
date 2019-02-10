@@ -148,7 +148,7 @@ public class Sampler {
         }
 
         Double score = ImageNoiseScorer.getImageNoiseScore(this);
-        ImageNoiseScorer.noiseScores.add(this.file.getName() + "," + score);
+        ImageNoiseScorer.NOISE_SCORES.add(this.file.getName() + "," + score);
 
         this.noiseScore = score;
         this.fingerprint = blockAverages;

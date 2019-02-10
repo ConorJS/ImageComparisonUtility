@@ -1,9 +1,8 @@
 package ui;
 
-import imaging.threading.FindDuplicatesWorker;
 import imaging.ImageComparisonUtility;
+import imaging.threading.FindDuplicatesWorker;
 import imaging.util.SimplePair;
-import imaging.util.SimpleTriple;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,7 +14,7 @@ import java.util.List;
 
 public class UI {
 
-    private static final String defaultPath = "C:\\Users\\Conor\\Pictures\\Wallpaper";
+    private static final String DEFAULT_PATH = "C:\\Users\\Conor\\Pictures\\Wallpaper";
 
     private ImageComparisonUtility app;
 
@@ -66,7 +65,7 @@ public class UI {
 
         this.windowFrame.add(this.containerBottom, BorderLayout.SOUTH);
         this.containerBottom.add(pathInputField, BorderLayout.WEST);
-        this.pathInputField.setText(this.defaultPath); // default text
+        this.pathInputField.setText(DEFAULT_PATH);
         this.containerBottom.add(calculateButton, BorderLayout.CENTER);
     }
 
@@ -75,7 +74,7 @@ public class UI {
         this.windowFrame.setVisible(true);
     }
 
-    public void clickCalculateButton() {
+    private void clickCalculateButton() {
         String tryPath = pathInputField.getText();
 
         File tryFile = new File(tryPath);
@@ -97,26 +96,24 @@ public class UI {
 
             } else {
                 this.appendUIText("Path: \"" + tryPath + "\" is not a directory.", true);
-
             }
         } else {
             this.appendUIText("Path: \"" + tryPath + "\" doesn't exist.", true);
-
         }
     }
 
     public void performDuplicateSearch(String path) {
 
-        List<SimpleTriple<SimplePair<String, String>, Double, Double>> duplicates = app.runImageComparisonForPath(path);
+        List<SimplePair<SimplePair<String, String>, Double>> duplicates = app.runImageComparisonForPath(path);
 
         this.appendUIText("<b>Total duplicates: " + duplicates.size() + "</b>", true);
         this.appendUIText("", true);
 
-        for (SimpleTriple<SimplePair<String, String>, Double, Double> duplicate : duplicates) {
+        for (SimplePair<SimplePair<String, String>, Double> duplicate : duplicates) {
 
-            String file1 = duplicate.getA().getKey();
-            String file2 = duplicate.getA().getValue();
-            Double diff = duplicate.getB();
+            String file1 = duplicate.getKey().getKey();
+            String file2 = duplicate.getKey().getValue();
+            Double diff = duplicate.getValue();
 
             if (diff.equals(0.0)) {
                 this.appendUIText(file1 + " duplicates " + file2 +

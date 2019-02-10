@@ -7,15 +7,20 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ImageNoiseScorer {
 
-    public static final ArrayList<String> noiseScores = new ArrayList<>(Collections.singletonList("wallpaper,score")); // debug only
+    public static final ArrayList<String> NOISE_SCORES = new ArrayList<>(Collections.singletonList("wallpaper,score")); // debug only
+    public static final ArrayList<String> NOISE_ADJUSTMENTS_VERY_LOW_NOISE_SUBJECT =
+            new ArrayList<>(Collections.singletonList("targetWallpaper,score")); // debug only
+    public static final ArrayList<String> NOISE_ADJUSTMENTS_REGULAR_NOISE_SUBJECT =
+            new ArrayList<>(Collections.singletonList("targetWallpaper,score")); // debug only
 
+    // TODO: Refactor this to consider PNG files better, as well as whole application.
+    // TODO: The assumption is made that there are three 8-bit layers per image, but with transparent PNGs,
+    // TODO: there is also an alpha layer, making four layers.
     public static Double getImageNoiseScore(Sampler sampler) {
         byte[] pixels = sampler.getPixels();
 

@@ -8,7 +8,6 @@ import imaging.threading.ImageLoaderWorker;
 import imaging.threading.NumberOrderedPairList;
 import imaging.util.SimpleColor;
 import imaging.util.SimplePair;
-import imaging.util.SimpleTriple;
 import threading.EventTimer;
 import threading.SynArrayList;
 import threading.ThreadPool;
@@ -20,8 +19,10 @@ import java.io.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ImageComparisonUtility {
 
@@ -42,7 +43,7 @@ public class ImageComparisonUtility {
     }
 
     // TODO: Break down this method
-    public List<SimpleTriple<SimplePair<String, String>, Double, Double>> runImageComparisonForPath(String path) {
+    public List<SimplePair<SimplePair<String, String>, Double>> runImageComparisonForPath(String path) {
         HashCacheManager hashCacheManager = new HashCacheManager(path);
         ThreadPool threadPool = new ThreadPool();
 
@@ -113,28 +114,29 @@ public class ImageComparisonUtility {
 
         // Each pair key is a pair containing both filenames the comparison was drawn between,
         // the value is the comparison score
+        // TODO - refactor/remove?
         Map<String, List<SimplePair<String, Integer>>> allComparisonScores = new HashMap<>(); // debug
-        List<SimpleTriple<SimplePair<String, String>, Double, Double>> duplicatePairs = new ArrayList<>();
+        List<SimplePair<SimplePair<String, String>, Double>> duplicatePairs = new ArrayList<>();
         for (int i = 0; i < pictureSamplers.size(); i++) {
             NumberOrderedPairList<String> comparisonScores = new NumberOrderedPairList<>();
-            Sampler compareSampler = pictureSamplers.get(i);
+            Sampler leftSampler = pictureSamplers.get(i);
 
-            for (Sampler pictureSampler : pictureSamplers) {
+            for (Sampler rightSampler : pictureSamplers) {
 
-                if (compareSampler != pictureSampler) {
+                if (leftSampler != rightSampler) {
 
-                    if (pictureSampler.getFileMdHash() == compareSampler.getFileMdHash()) {
+                    if (rightSampler.getFileMdHash() == leftSampler.getFileMdHash()) {
 
                         // Handle hash matches differently: a 0 difference score means hash-identical
                         // (this is impossible to achieve otherwise, even when comparing identical files)
-                        comparisonScores.add(pictureSampler.getFile().getName(), 0);
+                        comparisonScores.add(rightSampler.getFile().getName(), 0);
 
                     } else {
                         int comparisonScore = getComparisonScore(
-                                compareSampler.getFingerprint(this.samplerConfig),
-                                pictureSampler.getFingerprint(this.samplerConfig));
+                                leftSampler.getFingerprint(this.samplerConfig), leftSampler.getNoiseScore(),
+                                rightSampler.getFingerprint(this.samplerConfig), rightSampler.getNoiseScore());
 
-                        comparisonScores.add(pictureSampler.getFile().getName(), comparisonScore);
+                        comparisonScores.add(rightSampler.getFile().getName(), comparisonScore);
                     }
                 }
             }
@@ -149,15 +151,15 @@ public class ImageComparisonUtility {
 
                 if (divergenceRatio > DIVERGENCE_TOLERANCE_FACTOR) {
 
+                    // TODO: Probably refactor away SimplePair/SimpleTriple usage and use bespoke classes
                     duplicatePairs.add(
-                            new SimpleTriple(
+                            new SimplePair(
                                 new SimplePair(
                                         // name of subject image file (LHS)
                                         comparisonScore.getKey(),
                                         // name of subject image file (RHS)
-                                        compareSampler.getFile().getName()),
-                                diff,
-                                    new Double(0))
+                                        leftSampler.getFile().getName()),
+                                diff)
                             );
                 }
             }
@@ -175,14 +177,14 @@ public class ImageComparisonUtility {
             for (int i = 0; i < duplicatePairs.size(); i++) {
                 if (fullPass) {
 
-                    String filename1 = duplicatePairs.get(i).getA().getKey();
-                    String filename2 = duplicatePairs.get(i).getA().getValue();
+                    String filename1 = duplicatePairs.get(i).getKey().getKey();
+                    String filename2 = duplicatePairs.get(i).getKey().getValue();
 
                     for (int j = 0; j < duplicatePairs.size(); j++) {
                         if (fullPass) {
 
-                            String filenameInner1 = duplicatePairs.get(j).getA().getKey();
-                            String filenameInner2 = duplicatePairs.get(j).getA().getValue();
+                            String filenameInner1 = duplicatePairs.get(j).getKey().getKey();
+                            String filenameInner2 = duplicatePairs.get(j).getKey().getValue();
 
                             if (filenameInner1.equals(filename2) && (filenameInner2.equals(filename1))) {
                                 duplicatePairs.remove(duplicatePairs.get(j));
@@ -198,14 +200,14 @@ public class ImageComparisonUtility {
         System.out.println("# duplicate pairs: " + duplicatePairs.size());
         // TODO: CSV-like output, doesn't handle files with , characters in them though
         for (int i = 0; i < duplicatePairs.size(); i++) {
-            System.out.println(duplicatePairs.get(i).getA().getKey() + "," +
-                    duplicatePairs.get(i).getA().getValue() + "," +
-                    duplicatePairs.get(i).getB());
+            System.out.println(duplicatePairs.get(i).getKey().getKey() + "," +
+                    duplicatePairs.get(i).getKey().getValue() + "," +
+                    duplicatePairs.get(i).getValue());
         }
 
         File noiseScoresFile = new File("NoiseScores.csv");
         try {
-            FileHandlerUtil.writeLinesToFile(noiseScoresFile, ImageNoiseScorer.noiseScores);
+            FileHandlerUtil.writeLinesToFile(noiseScoresFile, ImageNoiseScorer.NOISE_SCORES);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -231,13 +233,14 @@ public class ImageComparisonUtility {
         }
     }
 
-    private int getComparisonScore(List<SimplePair<Point, SimpleColor>> a, List<SimplePair<Point, SimpleColor>> b) {
-        if (a.size() == b.size()) {
+    private int getComparisonScore(List<SimplePair<Point, SimpleColor>> leftFingerprint, double leftNoiseScore,
+                                   List<SimplePair<Point, SimpleColor>> rightFingerprint, double rightNoiseScore) {
+        if (leftFingerprint.size() == rightFingerprint.size()) {
             // Do a simple comparison of pixel colors between two fingerprints
-            int score = getBaseDifferenceScore(a, b);
+            int score = getDifferenceScore(leftFingerprint, rightFingerprint);
 
             // Now that we have the difference score, adjust for noise.
-//            score = adjustScoreForNoise(score, )
+            score = adjustScoreForNoise(score, leftNoiseScore, rightNoiseScore);
 
             return score;
 
@@ -249,7 +252,7 @@ public class ImageComparisonUtility {
     }
 
     // TODO: Look into reducing the complexity of the parameters to this method
-    private int getBaseDifferenceScore(List<SimplePair<Point, SimpleColor>> a, List<SimplePair<Point, SimpleColor>> b) {
+    private int getDifferenceScore(List<SimplePair<Point, SimpleColor>> a, List<SimplePair<Point, SimpleColor>> b) {
         int differenceScore = 0;
 
         for (int i = 0; i < a.size(); i++) {
@@ -264,13 +267,10 @@ public class ImageComparisonUtility {
         return differenceScore;
     }
 
-    // TODO: Implement
-    private int adjustScoreForNoise(int score, double noiseScoreA, double noiseScoreB) {
+    private int adjustScoreForNoise(int score, double leftNoiseScore, double rightNoiseScore) {
         // We need to adjust our tolerance significantly when
         // comparing two images that both have very low noise
-        // TODO: trying 1 / log(Min(a.noiseScore, b.noiseScore))
-//                double relativeNoiseFactor = Math.min()
-
-        return 0;
+        double relativeNoiseFactor = 1.0 / Math.sqrt(Math.max(leftNoiseScore, rightNoiseScore));
+        return (int)(score * relativeNoiseFactor);
     }
 }

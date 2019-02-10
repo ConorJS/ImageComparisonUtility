@@ -1,6 +1,6 @@
 package imaging.sampler;
 
-
+// TODO: Rename to SamplerFingerprintConfig
 public class SamplerConfig {
 
     private int accuracyX;
