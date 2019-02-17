@@ -57,7 +57,7 @@ public class HashCacheManager extends CacheManager<Sampler, Integer> {
     }
 
     @Override
-    JsonNode samplerAsJson(Sampler sampler) {
+    JsonNode cachedObjectAsJSON(Sampler sampler) {
         ObjectMapper mapper = new ObjectMapper();
 
         // Root
@@ -90,7 +90,7 @@ public class HashCacheManager extends CacheManager<Sampler, Integer> {
     }
 
     @Override
-    Map<Integer, Sampler> hashCacheAsPOJO(JsonNode root) {
+    Map<Integer, Sampler> cacheAsPOJO(JsonNode root) {
         ObjectMapper mapper = new ObjectMapper();
         Map<Integer, Sampler> hashesWithSamplers = new HashMap<>();
 

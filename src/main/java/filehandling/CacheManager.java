@@ -63,7 +63,7 @@ public abstract class CacheManager<T, I> {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode json = mapper.readTree(fileString);
 
-            setCache(hashCacheAsPOJO(json));
+            setCache(cacheAsPOJO(json));
 
         } catch (IOException e) {
             System.out.println("Couldn't load cache: " + cacheFile.getAbsolutePath() + ", proceeding without a cache.");
@@ -79,7 +79,7 @@ public abstract class CacheManager<T, I> {
             }
             ObjectMapper mapper = new ObjectMapper();
             ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
-            writer.writeValue(cacheFile, hashCacheAsJson(getNewCache().values()));
+            writer.writeValue(cacheFile, cacheAsJSON(getNewCache().values()));
             System.out.println("Saved cache at: " + cacheFile.getAbsolutePath());
 
         } catch (IOException e) {
@@ -100,14 +100,14 @@ public abstract class CacheManager<T, I> {
                 getCache().containsKey(identifier);
     }
 
-    abstract JsonNode samplerAsJson(T t);
+    abstract JsonNode cachedObjectAsJSON(T t);
 
-    abstract Map<I, T> hashCacheAsPOJO(JsonNode root);
+    abstract Map<I, T> cacheAsPOJO(JsonNode root);
 
-    private JsonNode hashCacheAsJson(Collection<T> samplers) {
+    private JsonNode cacheAsJSON(Collection<T> objectsToCache) {
         ArrayNode cache = jsonNodeFactory.arrayNode();
-        for (T t : samplers) {
-            cache.add(samplerAsJson(t));
+        for (T t : objectsToCache) {
+            cache.add(cachedObjectAsJSON(t));
         }
 
         return cache;
