@@ -43,7 +43,7 @@ public class ImageComparisonUtility {
         // Load the images into picture samplers
         List<Sampler> pictureSamplers = loadImages(hashCacheManager, path);
 
-        // Each pair key is a pair containing both filenames the comparison was drawn between,
+        // Each pair key is a pair containing both file names the comparison was drawn between,
         // the value is the comparison score
         List<SimplePair<SimplePair<String, String>, Double>> duplicatePairs = new ArrayList<>();
         for (int i = 0; i < pictureSamplers.size(); i++) {
@@ -90,7 +90,7 @@ public class ImageComparisonUtility {
                         Sampler loadedFromCache = hashCacheManager.loadCachedSampler(hash);
 
                         // Make sure we associate the new file name with the cached fingerprint;
-                        // filenames change, hashes tend not to unless the file was modified.
+                        // file names change, hashes tend not to unless the file was modified.
                         loadedFromCache.setFile(picture);
                         loadedFromCache.setFileMdHash(hash);
                         pictureSamplers.add(loadedFromCache);

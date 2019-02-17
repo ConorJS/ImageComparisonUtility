@@ -1,101 +1,63 @@
 package filehandling;
 
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.NumericNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import imaging.sampler.FingerprintConfig;
 import imaging.sampler.Sampler;
 import imaging.util.SimpleColor;
 import imaging.util.SimplePair;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.awt.*;
-import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class HashCacheManager {
+public class HashCacheManager extends CacheManager<Sampler, Integer> {
+
+    // ========= ATTRIBUTES ===========================================================================================
 
     private static final String CACHE_DIRECTORY = ".duplicate_detection";
     private static final String CACHE_FILE = "cache";
-    private static final String CACHE_PATH = CACHE_DIRECTORY + "\\" + CACHE_FILE;
 
-    private final JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);
-
+    @Getter // override
+    @Setter // override
     private Map<Integer, Sampler> cache;
-    private final Map<Integer, Sampler> newCache = new HashMap<>();
 
-    private final String cacheDirectoryAbsolutePath;
-    private final String absoluteCachePath;
+    @Getter // override
+    private Map<Integer, Sampler> newCache = new HashMap<>();
 
+    // ========= CONSTRUCTOR ==========================================================================================
     public HashCacheManager(String imageFolderPath) {
-        cacheDirectoryAbsolutePath = imageFolderPath + "/" + CACHE_DIRECTORY;
-        absoluteCachePath = imageFolderPath + "/" + CACHE_PATH;
-        loadCache();
-
-        ObjectMapper mapper = new ObjectMapper();
-
-        File cacheFile = new File(absoluteCachePath);
-        if (cacheFile.exists()) {
-            try {
-                mapper.readTree(cacheFile);
-
-            } catch (IOException e) {
-                throw new RuntimeException("Couldn't read cache: " + absoluteCachePath + ". Maybe it is corrupt?");
-            }
-        } else {
-            System.out.println("No cache detected, creating " + absoluteCachePath);
-        }
+        super(imageFolderPath);
     }
 
-    public void cache(Sampler sampler) {
+    // ========= ABSTRACT CLASS IMPLEMENTATION DETAILS ================================================================
+    @Override
+    void cache(Sampler sampler, Integer fileMdHash) {
         newCache.put(sampler.getFileMdHash(), sampler);
     }
 
-    public void saveCache() {
-        File cacheFile = new File(absoluteCachePath);
-        try {
-            File directory = new File(cacheDirectoryAbsolutePath);
-            if (!directory.exists() && !directory.mkdir()) {
-                throw new RuntimeException("Couldn't create cache directory.");
-            }
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
-            writer.writeValue(cacheFile, hashCacheAsJson(newCache.values()));
-            System.out.println("Saved cache at: " + cacheFile.getAbsolutePath());
-
-        } catch (IOException e) {
-            throw new RuntimeException("Couldn't write cache: " + absoluteCachePath);
-        }
+    @Override
+    String getCacheDirectory() {
+        return CACHE_DIRECTORY;
     }
 
-    // Cache hit if cache exists, a file with the same hash was fingerprinted + cached,
-    // and that the cached fingerprint was performed with the same configuration as what is being requested
-    public boolean isCached(int imageFileHash, FingerprintConfig config) {
-        return (cache != null) &&
-                cache.containsKey(imageFileHash) &&
-                cache.get(imageFileHash).getFingerprintConfig_cached().equals(config);
+    @Override
+    String getCacheFile() {
+        return CACHE_FILE;
     }
 
-    public Sampler loadCachedSampler(Integer imageFileHash) {
-        // Returns a copy of a sampler, we don't want two files
-        // sharing the same hash to point to the same Sampler object
-        return cache.get(imageFileHash).copy();
-    }
-
-    private JsonNode hashCacheAsJson(Collection<Sampler> samplers) {
-        ArrayNode cache = jsonNodeFactory.arrayNode();
-        for (Sampler sampler : samplers) {
-            cache.add(samplerAsJson(sampler));
-        }
-
-        return cache;
-    }
-
-    private JsonNode samplerAsJson(Sampler sampler) {
+    @Override
+    JsonNode samplerAsJson(Sampler sampler) {
         ObjectMapper mapper = new ObjectMapper();
 
         // Root
@@ -127,24 +89,10 @@ public class HashCacheManager {
         return rootNode;
     }
 
-    private void loadCache() {
-        File cacheFile = new File(absoluteCachePath);
-        try {
-            String fileString = FileHandlerUtil.readFileToString(cacheFile);
-
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode json = mapper.readTree(fileString);
-
-            cache = hashCacheAsPojo(json);
-
-        } catch (IOException e) {
-            System.out.println("Couldn't load cache: " + cacheFile.getAbsolutePath() + ", proceeding without a cache.");
-        }
-    }
-
-    private Map<Integer, Sampler> hashCacheAsPojo(JsonNode root) {
+    @Override
+    Map<Integer, Sampler> hashCacheAsPOJO(JsonNode root) {
         ObjectMapper mapper = new ObjectMapper();
-        Map<Integer, Sampler> hashersWithSamplers = new HashMap<>();
+        Map<Integer, Sampler> hashesWithSamplers = new HashMap<>();
 
         // For each Sampler-Hash key-value pair
         for (JsonNode node : root) {
@@ -172,13 +120,35 @@ public class HashCacheManager {
 
                 Sampler sampler = new Sampler(fingerprint, fingerprintConfig, noiseScoreNode.asDouble());
 
-                hashersWithSamplers.put(hashNode.asInt(), sampler);
+                hashesWithSamplers.put(hashNode.asInt(), sampler);
 
             } catch (IOException e) {
                 e.printStackTrace();
                 throw new RuntimeException("Couldn't parse cache. Maybe it is corrupt?");
             }
         }
-        return hashersWithSamplers;
+
+        return hashesWithSamplers;
+    }
+
+    // ========= HASH-CACHE-MANAGER METHODS ===========================================================================
+
+    // -- Simpler cache implementation
+    public void cache(Sampler sampler) {
+        cache(sampler, sampler.getFileMdHash());
+    }
+
+    // -- Use this instead of the abstract loadCachedObject(Integer)
+    public Sampler loadCachedSampler(Integer imageFileHash) {
+        // Returns a copy of a sampler, we don't want two files
+        // sharing the same hash to point to the same Sampler object
+        return loadCachedObject(imageFileHash).copy();
+    }
+
+    // -- Use this instead of the abstract isCached(Integer)
+    // Calls abstract implementation first, then does another check to see if the cached
+    // Sampler was cached with the same fingerprint configuration provided
+    public boolean isCached(Integer imageFileHash, FingerprintConfig config) {
+        return isCached(imageFileHash) && getCache().get(imageFileHash).getFingerprintConfig_cached().equals(config);
     }
 }
