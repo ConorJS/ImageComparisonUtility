@@ -1,6 +1,7 @@
 package main;
 
-import javafx.util.Pair;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -11,15 +12,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class PixelArtRestorer {
+    //== constants ====================================================================================================
 
     private static final int BLOCK_SIZE_CHECK_LIMIT = 35;
 
+    //== attributes ===================================================================================================
+
     private int height;
+
     private int width;
+
     private byte[] pixels;
 
-    public PixelArtRestorer(String sourcePath, String destinationPath) {
+    //== init =========================================================================================================
 
+    public PixelArtRestorer(String sourcePath, String destinationPath) {
         File file = new File(sourcePath);
 
         try {
@@ -35,12 +42,15 @@ public class PixelArtRestorer {
         }
     }
 
+    //== methods ======================================================================================================
+
     int determineBlockSize() {
         return this.determineBlockSize(this.pixels);
     }
 
-    private int determineBlockSize(byte[] imagePixels) {
+    //== helpers ======================================================================================================
 
+    private int determineBlockSize(byte[] imagePixels) {
         java.util.List<Pair<Integer, Double>> blockSizeColorDivergenceTotals = new ArrayList<>();
 
         // Try blocks of size 2 x 2 through to size MAX x MAX
@@ -57,7 +67,7 @@ public class PixelArtRestorer {
 
                     // Get the average of all the pixels in this box
                     divergenceTotal += getMeanDivergenceFromRasterBlock(imagePixels,
-                            k*i, j*i, (k*i)+i, (j*i)+i);
+                            k * i, j * i, (k * i) + i, (j * i) + i);
 
                     blocksChecked++;
                 }
@@ -77,10 +87,10 @@ public class PixelArtRestorer {
             // A homogenous block of size 10 x 10 will also consist of four homogenous blocks each of size 5 x 5,
             // and 25 homogenous blocks of size 2 x 2 - we can infer from this the block size of the art is 10 x 10
             if ((bestCandidatesDivergenceScore == -1) ||
-                    (blockSizeColorDivergenceTotal.getValue() <= bestCandidatesDivergenceScore)) {
+                    (blockSizeColorDivergenceTotal.getRight() <= bestCandidatesDivergenceScore)) {
 
-                bestCandidate = blockSizeColorDivergenceTotal.getKey();
-                bestCandidatesDivergenceScore = blockSizeColorDivergenceTotal.getValue();
+                bestCandidate = blockSizeColorDivergenceTotal.getLeft();
+                bestCandidatesDivergenceScore = blockSizeColorDivergenceTotal.getRight();
 
             }
         }
@@ -145,7 +155,7 @@ public class PixelArtRestorer {
         g /= pixels.size();
         b /= pixels.size();
 
-        return new Color((int)r, (int)g, (int)b);
+        return new Color((int) r, (int) g, (int) b);
     }
 
     private enum RGB {
@@ -155,7 +165,9 @@ public class PixelArtRestorer {
 
         private final int value;
 
-        private RGB(int value) { this.value = value; }
+        private RGB(int value) {
+            this.value = value;
+        }
     }
 
     private int diffRGB(Color color1, Color color2) {
@@ -165,6 +177,16 @@ public class PixelArtRestorer {
         diff += Math.abs(color1.getBlue() - color2.getBlue());
 
         return diff;
+    }
+
+    //== types ========================================================================================================
+
+    @Getter
+    @AllArgsConstructor
+    private static class Pair<X, Y> {
+        private X left;
+
+        private Y right;
     }
 
 }
