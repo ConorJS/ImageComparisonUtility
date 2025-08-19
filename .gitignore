@@ -6,6 +6,8 @@
 *.jpeg
 *.png
 *.csv
+test_folder/
+test_folder2/
 
 
 ## IDEA
